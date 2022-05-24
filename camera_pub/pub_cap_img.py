@@ -34,7 +34,8 @@ class ImgCapPublisher (Node):
             ret, frame = self.cam_cap.read() 
             # 축소하기
             #resizedFrame = cv2.resize(frame, (640, 480)) 
-
+            self.get_logger().info('\n--- Images are being published... ---')
+            
             if ret == True:
                 try:
                     msg = Image()

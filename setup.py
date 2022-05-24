@@ -10,6 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name, ['conf.json']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -21,7 +22,7 @@ setup(
     entry_points={
         'console_scripts': [
             'pub_cam_node = camera_pub.pub_cap_img:main',
-            #'pub_opencv_cam_node = camera_pub.pub_cap_opencv:main'
+            'pub_opencv_cam_node = camera_pub.pub_cap_opencv:main'
         ],
     },
 )

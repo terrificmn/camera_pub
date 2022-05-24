@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import os
+import json
 import cv2
 import numpy as np
 
@@ -7,72 +9,68 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
+from ament_index_python.packages import get_package_share_directory
+
+
 class CameraPublisher(Node):
-    def __init__(self):
+    def __init__(self, queueFromJson, timerFromJson):
         super().__init__('camera_publisher')
         
-        # initialize publisher
-        self.publisher_ = self.create_publisher(Image, "/camera0/image_raw", 10)
-        timer_period = 0.2
-        self.timer = self.create_timer(timer_period, self.timer_callback)
+        # json 파일에서 읽어온 것으로 publisher생성
+        self.publisher_ = self.create_publisher(Image, "/camera0/image_raw", queueFromJson)
+        self.create_timer(timerFromJson, self.timer_callback)
         
-        self.capture = cv2.VideoCapture(0)
-        self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 2)
-        # self.capture.set(cv2.CAP_PROP_FRAME_WIDTH,640)
-        # self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT,480)
+        self.cam_cap = cv2.VideoCapture(0)
+        # self.cam_cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
+        # self.cam_cap.set(cv2.CAP_PROP_FRAME_WIDTH,640)
+        # self.cam_cap.set(cv2.CAP_PROP_FRAME_HEIGHT,480)
 
-        # set image counter and videocapture object
-        self.i = 0
-        self.frame_num = 0
         self.get_logger().info('\n---- Images are being published... ---')
         
     def timer_callback(self):
-        if self.capture.isOpened() == False :
-            self.get_logger().error('\n--- Error opening video stream ---')
+        if self.cam_cap.isOpened() == False :
+            self.get_logger().error('\n--- Error opening video ---')
             rclpy.shutdown()
             
         else :
-            # reads image data
-            ret, frame = self.capture.read()
-            
+            # cam_cap 읽어오기 (0 device)
+            ret, frame = self.cam_cap.read()
+            #self.get_logger().info('\n--- Images are being published... ---') ## test
+
             if ret == True:
                 # processes image data and converts to ros 2 message
                 msg = Image()
                 msg.header.stamp = Node.get_clock(self).now().to_msg()
-                msg.header.frame_id = str(self.frame_num)
+                msg.header.frame_id = 'camera0'
                 msg.height = np.shape(frame)[0]
                 msg.width = np.shape(frame)[1]
                 msg.encoding = "bgr8"
                 msg.is_bigendian = False
                 msg.step = np.shape(frame)[2] * np.shape(frame)[1]
                 msg.data = np.array(frame).tobytes()
-                self.frame_num += 1
 
-                # publishes message
+                # publishes msg
                 self.publisher_.publish(msg)
                 
             else :
-                self.get_logger().error('\n--- 11Error opening video stream ---')
-                self.capture.release()
+                self.get_logger().error('\n--- Error opening video ---')
+                self.cam_cap.release()
                 rclpy.shutdown()
-        
-        # image counter increment
-        self.i += 1
-        
-        return None
 
 
 def main(args=None):
     rclpy.init(args=args)
 
-    camera_publisher = CameraPublisher()
+    # conf.json파일 불러오기
+    file_ = os.path.join(get_package_share_directory('camera_pub'), "conf.json")
+    with open(file_) as setFile:
+        settings = json.load(setFile)
+
+    # 읽어온 설정값 넘기면서 생성
+    camera_publisher = CameraPublisher(settings["queue_size"], settings["timer"])
     rclpy.spin(camera_publisher)
 
+    camera_publisher.get_logger().warn('\n--- Shutdown ---')
     camera_publisher.destroy_node()
     rclpy.shutdown()
     
-    return None
-
-
-if __name__ == '__main__':
-    main()
