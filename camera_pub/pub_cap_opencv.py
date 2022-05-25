@@ -65,6 +65,8 @@ def main(args=None):
     file_ = os.path.join(get_package_share_directory('camera_pub'), "conf.json")
     with open(file_) as setFile:
         settings = json.load(setFile)
+    
+    setFile.close()
 
     # 읽어온 설정값 넘기면서 생성
     camera_publisher = CameraPublisher(settings["queue_size"], settings["timer"])
